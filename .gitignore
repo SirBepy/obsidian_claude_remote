@@ -13,3 +13,4 @@ dist/
 *.egg-info/
 .pytest_cache/
 config.json
+src/obsidian_claude_remote/_version.py

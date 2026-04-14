@@ -2,13 +2,15 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 from typing import Optional
 
+from . import __version__
+
 
 def pick_vault(vaults: list[str]) -> Optional[str]:
     result: dict[str, Optional[str]] = {"path": None}
 
     root = tk.Tk()
-    root.title("obsidian_claude_remote - pick vault")
-    root.geometry("520x360")
+    root.title(f"Obsidian Claude Remote - {__version__}")
+    root.geometry("520x380")
     root.attributes("-topmost", True)
 
     tk.Label(
@@ -63,8 +65,17 @@ def pick_vault(vaults: list[str]) -> Optional[str]:
         result["path"] = None
         _close()
 
+    tk.Label(
+        root,
+        text=f"Version: {__version__}",
+        fg="#888",
+        anchor="w",
+        padx=12,
+        pady=4,
+    ).pack(fill="x", side="bottom")
+
     btns = tk.Frame(root)
-    btns.pack(fill="x", padx=12, pady=8)
+    btns.pack(fill="x", padx=12, pady=8, side="bottom")
     tk.Button(btns, text="Browse...", command=on_browse).pack(side="left")
     tk.Button(btns, text="Cancel", command=on_cancel).pack(side="right")
     tk.Button(btns, text="OK", command=on_ok).pack(side="right", padx=4)

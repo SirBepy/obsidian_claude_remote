@@ -5,6 +5,7 @@ from pathlib import Path
 import pystray
 from PIL import Image
 
+from . import __version__
 from .logger import log
 
 
@@ -38,6 +39,6 @@ def build_icon(on_settings, on_restart, on_quit) -> pystray.Icon:
     return pystray.Icon(
         "obsidian_claude_remote",
         image,
-        "obsidian_claude_remote - running",
+        f"Obsidian Claude Remote - {__version__}",
         menu,
     )

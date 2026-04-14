@@ -15,6 +15,14 @@ def main() -> int:
     if spec.exists():
         spec.unlink()
 
+    rc = subprocess.call(
+        [sys.executable, str(ROOT / "scripts" / "write_version.py")],
+        cwd=str(ROOT),
+    )
+    if rc != 0:
+        print("write_version.py failed, aborting build")
+        return rc
+
     entry = ROOT / "scripts" / "_pyinstaller_entry.py"
     cmd = [
         sys.executable,

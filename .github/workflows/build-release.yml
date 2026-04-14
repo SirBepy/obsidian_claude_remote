@@ -25,12 +25,6 @@ jobs:
       - name: Install deps
         run: pip install -r requirements.txt
 
-      - name: Generate icon
-        run: python scripts/generate_icon.py
-
-      - name: Build exe
-        run: python scripts/build.py
-
       - name: Compute next version
         id: ver
         shell: bash
@@ -49,6 +43,14 @@ jobs:
           fi
           echo "next=$next" >> "$GITHUB_OUTPUT"
           echo "Next version: $next"
+
+      - name: Generate icon
+        run: python scripts/generate_icon.py
+
+      - name: Build exe
+        env:
+          OCR_VERSION: ${{ steps.ver.outputs.next }}
+        run: python scripts/build.py
 
       - name: Create and push tag
         shell: bash
