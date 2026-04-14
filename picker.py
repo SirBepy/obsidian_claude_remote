@@ -41,17 +41,27 @@ def pick_vault(vaults: list[str]) -> Optional[str]:
             listbox.select_clear(0, tk.END)
             listbox.select_set(tk.END)
 
+    def _close() -> None:
+        try:
+            root.quit()
+        except Exception:
+            pass
+        try:
+            root.destroy()
+        except Exception:
+            pass
+
     def on_ok() -> None:
         sel = listbox.curselection()
         if not sel:
             messagebox.showwarning("Pick vault", "Select a vault first.")
             return
         result["path"] = listbox.get(sel[0])
-        root.destroy()
+        _close()
 
-    def on_cancel() -> None:
+    def on_cancel(*_args) -> None:
         result["path"] = None
-        root.destroy()
+        _close()
 
     btns = tk.Frame(root)
     btns.pack(fill="x", padx=12, pady=8)
@@ -60,5 +70,6 @@ def pick_vault(vaults: list[str]) -> Optional[str]:
     tk.Button(btns, text="OK", command=on_ok).pack(side="right", padx=4)
 
     root.protocol("WM_DELETE_WINDOW", on_cancel)
+    root.bind("<Escape>", on_cancel)
     root.mainloop()
     return result["path"]
