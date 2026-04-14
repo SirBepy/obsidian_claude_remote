@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>obsidian_claude_remote - pick vault</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/gh/sirbepy/bepy-project-init@main/styleguide.css"
+    />
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        font-family: var(--font-body);
+        color: var(--color-text);
+      }
+      body {
+        display: flex;
+        flex-direction: column;
+        padding: 20px;
+        gap: 16px;
+        box-sizing: border-box;
+      }
+      h1 {
+        font-family: var(--font-heading);
+        font-size: 18px;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      p.sub {
+        margin: 0;
+        color: var(--color-text-muted);
+        font-size: 13px;
+      }
+      .list {
+        flex: 1;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-height: 0;
+      }
+      .vault {
+        padding: 10px 12px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        word-break: break-all;
+        font-size: 13px;
+      }
+      .vault.selected {
+        outline: 2px solid var(--color-primary);
+      }
+      .vault i {
+        color: var(--color-text-muted);
+        flex-shrink: 0;
+      }
+      .empty {
+        color: var(--color-text-muted);
+        font-size: 13px;
+        padding: 12px;
+        text-align: center;
+      }
+      .actions {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+      .actions .left {
+        margin-right: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <h1><i class="ph ph-vault"></i> Pick an Obsidian vault</h1>
+    <p class="sub">Claude Code will run inside the selected vault.</p>
+
+    <div id="list" class="list"></div>
+
+    <div class="actions">
+      <button class="btn btn-ghost left" onclick="browse()">
+        <i class="ph ph-folder-open"></i> Browse...
+      </button>
+      <button class="btn btn-outline" onclick="cancel()">Cancel</button>
+      <button class="btn btn-primary" onclick="ok()">OK</button>
+    </div>
+
+    <script>
+      let vaults = [];
+      let selected = -1;
+
+      function render() {
+        const list = document.getElementById("list");
+        list.innerHTML = "";
+        if (!vaults.length) {
+          const e = document.createElement("div");
+          e.className = "empty card-alt";
+          e.textContent = "No vaults auto-detected. Use Browse to pick one.";
+          list.appendChild(e);
+          return;
+        }
+        vaults.forEach((v, i) => {
+          const row = document.createElement("div");
+          row.className = "card vault" + (i === selected ? " selected" : "");
+          row.innerHTML = `<i class="ph ph-folder"></i><span>${v}</span>`;
+          row.onclick = () => {
+            selected = i;
+            render();
+          };
+          row.ondblclick = ok;
+          list.appendChild(row);
+        });
+      }
+
+      async function init() {
+        vaults = await window.pywebview.api.get_vaults();
+        if (vaults.length) selected = 0;
+        render();
+      }
+
+      async function browse() {
+        const path = await window.pywebview.api.browse();
+        if (!path) return;
+        vaults.push(path);
+        selected = vaults.length - 1;
+        render();
+      }
+
+      function ok() {
+        if (selected < 0) return;
+        window.pywebview.api.submit(vaults[selected]);
+      }
+
+      function cancel() {
+        window.pywebview.api.submit(null);
+      }
+
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") cancel();
+        if (e.key === "Enter") ok();
+      });
+
+      window.addEventListener("pywebviewready", init);
+    </script>
+  </body>
+</html>

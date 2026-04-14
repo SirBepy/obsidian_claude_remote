@@ -6,13 +6,17 @@ build-backend = "setuptools.build_meta"
 name = "obsidian_claude_remote"
 version = "0.1.0"
 description = "Windows tray app that auto-launches Claude Code with --remote-control inside an Obsidian vault."
-requires-python = ">=3.10"
+requires-python = ">=3.10,<3.14"
 dependencies = [
     "pystray",
     "Pillow",
     "psutil",
     "pywin32; sys_platform == 'win32'",
+    "pywebview>=5.0",
 ]
+
+[tool.setuptools.package-data]
+obsidian_claude_remote = ["ui/*.html"]
 
 [project.scripts]
 obsidian_claude_remote = "obsidian_claude_remote.__main__:main"

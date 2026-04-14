@@ -37,6 +37,10 @@ def main() -> int:
         "assets/images/favicon.png;assets/images",
         "--add-data",
         "icon.ico;.",
+        "--add-data",
+        "src/obsidian_claude_remote/ui/picker.html;ui",
+        "--collect-all",
+        "webview",
         "--name=obsidian_claude_remote",
         str(entry),
     ]

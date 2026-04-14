@@ -1,86 +1,105 @@
-import tkinter as tk
-from tkinter import filedialog, messagebox
+import os
+import sys
+import threading
+from pathlib import Path
 from typing import Optional
 
-from . import __version__
+import webview
+
+from .logger import log
+
+WINDOW_TITLE = "obsidian_claude_remote - pick vault"
+
+
+def _resource_path(rel: str) -> str:
+    base = getattr(sys, "_MEIPASS", None)
+    if base:
+        return os.path.join(base, rel)
+    return str(Path(__file__).resolve().parent / rel)
+
+
+def _icon_path() -> Optional[str]:
+    candidates = [
+        _resource_path("icon.ico"),
+        str(Path(__file__).resolve().parents[2] / "icon.ico"),
+    ]
+    for c in candidates:
+        if os.path.exists(c):
+            return c
+    return None
+
+
+def _set_window_icon(title: str, ico: str) -> None:
+    try:
+        import win32api
+        import win32con
+        import win32gui
+
+        hwnd = 0
+        for _ in range(50):
+            hwnd = win32gui.FindWindow(None, title)
+            if hwnd:
+                break
+            threading.Event().wait(0.05)
+        if not hwnd:
+            log.warning("picker window hwnd not found, icon not set")
+            return
+        big = win32gui.LoadImage(
+            0, ico, win32con.IMAGE_ICON, 32, 32, win32con.LR_LOADFROMFILE
+        )
+        small = win32gui.LoadImage(
+            0, ico, win32con.IMAGE_ICON, 16, 16, win32con.LR_LOADFROMFILE
+        )
+        win32api.SendMessage(hwnd, win32con.WM_SETICON, win32con.ICON_BIG, big)
+        win32api.SendMessage(hwnd, win32con.WM_SETICON, win32con.ICON_SMALL, small)
+    except Exception as e:
+        log.warning("failed to set picker icon: %s", e)
+
+
+class _Api:
+    def __init__(self, vaults: list[str], result: dict):
+        self._vaults = vaults
+        self._result = result
+        self.window: Optional[webview.Window] = None
+
+    def get_vaults(self) -> list[str]:
+        return list(self._vaults)
+
+    def browse(self) -> Optional[str]:
+        if not self.window:
+            return None
+        picked = self.window.create_file_dialog(webview.FOLDER_DIALOG)
+        if not picked:
+            return None
+        return picked[0]
+
+    def submit(self, path: Optional[str]) -> None:
+        self._result["path"] = path
+        if self.window:
+            self.window.destroy()
 
 
 def pick_vault(vaults: list[str]) -> Optional[str]:
-    result: dict[str, Optional[str]] = {"path": None}
+    result: dict = {"path": None}
+    api = _Api(vaults, result)
+    html_path = _resource_path("ui/picker.html")
 
-    root = tk.Tk()
-    root.title(f"Obsidian Claude Remote - {__version__}")
-    root.geometry("520x380")
-    root.attributes("-topmost", True)
+    window = webview.create_window(
+        WINDOW_TITLE,
+        html_path,
+        js_api=api,
+        width=560,
+        height=420,
+        resizable=True,
+        background_color="#111111",
+    )
+    api.window = window
 
-    tk.Label(
-        root,
-        text="Pick an Obsidian vault to host Claude Code:",
-        anchor="w",
-        padx=12,
-        pady=8,
-    ).pack(fill="x")
+    ico = _icon_path()
+    if ico:
+        def _on_shown():
+            threading.Timer(0.1, lambda: _set_window_icon(WINDOW_TITLE, ico)).start()
+        window.events.shown += _on_shown
 
-    listbox = tk.Listbox(root, height=10)
-    for v in vaults:
-        listbox.insert(tk.END, v)
-    if vaults:
-        listbox.select_set(0)
-    listbox.pack(fill="both", expand=True, padx=12, pady=4)
-
-    if not vaults:
-        tk.Label(
-            root,
-            text="No vaults auto-detected. Use Browse to pick one manually.",
-            fg="#888",
-            padx=12,
-        ).pack(fill="x")
-
-    def on_browse() -> None:
-        path = filedialog.askdirectory(title="Select vault folder")
-        if path:
-            listbox.insert(tk.END, path)
-            listbox.select_clear(0, tk.END)
-            listbox.select_set(tk.END)
-
-    def _close() -> None:
-        try:
-            root.quit()
-        except Exception:
-            pass
-        try:
-            root.destroy()
-        except Exception:
-            pass
-
-    def on_ok() -> None:
-        sel = listbox.curselection()
-        if not sel:
-            messagebox.showwarning("Pick vault", "Select a vault first.")
-            return
-        result["path"] = listbox.get(sel[0])
-        _close()
-
-    def on_cancel(*_args) -> None:
-        result["path"] = None
-        _close()
-
-    tk.Label(
-        root,
-        text=f"Version: {__version__}",
-        fg="#888",
-        anchor="w",
-        padx=12,
-        pady=4,
-    ).pack(fill="x", side="bottom")
-
-    btns = tk.Frame(root)
-    btns.pack(fill="x", padx=12, pady=8, side="bottom")
-    tk.Button(btns, text="Browse...", command=on_browse).pack(side="left")
-    tk.Button(btns, text="Cancel", command=on_cancel).pack(side="right")
-    tk.Button(btns, text="OK", command=on_ok).pack(side="right", padx=4)
-
-    root.protocol("WM_DELETE_WINDOW", on_cancel)
-    root.bind("<Escape>", on_cancel)
-    root.mainloop()
+    webview.start()
     return result["path"]
