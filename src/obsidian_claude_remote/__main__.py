@@ -1,10 +1,17 @@
 import atexit
+import os
 import sys
 
 from . import config, launcher, startup, vault_detector
 from .logger import log
 from .picker import pick_vault
 from .tray import build_icon
+
+
+def _paths_equal(a: str | None, b: str | None) -> bool:
+    if not a or not b:
+        return False
+    return os.path.normcase(os.path.abspath(a)) == os.path.normcase(os.path.abspath(b))
 
 
 def ensure_vault(cfg: dict) -> str | None:
@@ -21,14 +28,19 @@ def ensure_vault(cfg: dict) -> str | None:
 
 
 def ensure_startup(cfg: dict) -> None:
-    if cfg.get("auto_registered_startup") and startup.is_registered():
-        return
-    target = sys.executable
-    if getattr(sys, "frozen", False):
-        target = sys.executable
-    else:
+    if not getattr(sys, "frozen", False):
         log.info("running from source, skipping startup registration")
         return
+    target = sys.executable
+    current = startup.registered_target()
+    if _paths_equal(current, target):
+        return
+    if current:
+        log.info(
+            "startup .lnk target mismatch, re-registering (old=%s new=%s)",
+            current,
+            target,
+        )
     startup.register(target)
     cfg["auto_registered_startup"] = True
     config.save(cfg)

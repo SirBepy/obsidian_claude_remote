@@ -28,6 +28,21 @@ def is_registered() -> bool:
     return shortcut_path().exists()
 
 
+def registered_target() -> str | None:
+    sp = shortcut_path()
+    if not sp.exists():
+        return None
+    try:
+        from win32com.client import Dispatch
+
+        shell = Dispatch("WScript.Shell")
+        sc = shell.CreateShortCut(str(sp))
+        return sc.Targetpath
+    except Exception as e:
+        log.warning("could not read startup shortcut target: %s", e)
+        return None
+
+
 def register(target_exe: str) -> None:
     try:
         from win32com.client import Dispatch
