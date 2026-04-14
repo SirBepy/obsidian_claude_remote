@@ -45,6 +45,21 @@ def _find_hwnd_for_pid(pid: int) -> int:
     return found["hwnd"]
 
 
+def _disable_close_button(hwnd: int) -> None:
+    if sys.platform != "win32":
+        return
+    import win32con
+    import win32gui
+
+    try:
+        menu = win32gui.GetSystemMenu(hwnd, 0)
+        if menu:
+            win32gui.DeleteMenu(menu, win32con.SC_CLOSE, win32con.MF_BYCOMMAND)
+            win32gui.DrawMenuBar(hwnd)
+    except Exception as e:
+        log.warning("disable close button failed: %s", e)
+
+
 def _resolve_hwnd() -> int:
     global _hwnd
     if _proc is None:
@@ -54,6 +69,7 @@ def _resolve_hwnd() -> int:
         if hwnd:
             _hwnd = hwnd
             log.info("console hwnd resolved hwnd=%s pid=%s", hwnd, _proc.pid)
+            _disable_close_button(hwnd)
             return hwnd
         time.sleep(0.05)
     log.warning("console hwnd not resolved pid=%s", _proc.pid)
