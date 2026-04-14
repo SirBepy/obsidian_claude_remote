@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-from logger import log
+from .logger import log
 
 SHORTCUT_NAME = "obsidian_claude_remote.lnk"
 

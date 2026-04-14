@@ -2,7 +2,7 @@ import json
 import os
 from pathlib import Path
 
-from logger import log
+from .logger import log
 
 
 def detect() -> list[str]:

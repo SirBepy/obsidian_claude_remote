@@ -26,10 +26,10 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Generate icon
-        run: python generate_icon.py
+        run: python scripts/generate_icon.py
 
       - name: Build exe
-        run: python build.py
+        run: python scripts/build.py
 
       - name: Compute next version
         id: ver

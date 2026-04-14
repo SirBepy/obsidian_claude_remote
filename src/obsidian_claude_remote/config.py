@@ -3,7 +3,7 @@ import os
 import sys
 from pathlib import Path
 
-from logger import log
+from .logger import log
 
 APP_NAME = "obsidian_claude_remote"
 

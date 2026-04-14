@@ -1,13 +1,10 @@
 import atexit
 import sys
 
-import config
-import launcher
-import startup
-import vault_detector
-from logger import log
-from picker import pick_vault
-from tray import build_icon
+from . import config, launcher, startup, vault_detector
+from .logger import log
+from .picker import pick_vault
+from .tray import build_icon
 
 
 def ensure_vault(cfg: dict) -> str | None:

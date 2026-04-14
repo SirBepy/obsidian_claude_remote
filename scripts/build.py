@@ -3,7 +3,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).parent
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def main() -> int:
@@ -15,6 +15,7 @@ def main() -> int:
     if spec.exists():
         spec.unlink()
 
+    entry = ROOT / "scripts" / "_pyinstaller_entry.py"
     cmd = [
         sys.executable,
         "-m",
@@ -22,12 +23,14 @@ def main() -> int:
         "--onefile",
         "--windowed",
         "--icon=icon.ico",
+        "--paths",
+        "src",
         "--add-data",
         "assets/images/favicon.png;assets/images",
         "--add-data",
         "icon.ico;.",
         "--name=obsidian_claude_remote",
-        "main.py",
+        str(entry),
     ]
     print("running:", " ".join(cmd))
     return subprocess.call(cmd, cwd=str(ROOT))

@@ -14,13 +14,15 @@ Windows tray app. Auto-launches Claude Code with `--remote-control` inside an Ob
 
 ```
 pip install -r requirements.txt
-python main.py
+python -m obsidian_claude_remote
 ```
+
+Note: Python picks up the `src/` layout automatically if you `pip install -e .` first, otherwise set `PYTHONPATH=src`.
 
 ## Build the exe
 
 ```
-python build.py
+python scripts/build.py
 ```
 
 Output: `dist/obsidian_claude_remote.exe`. Move it somewhere stable (it self-registers in Startup, so the path it lives at when you first run it is the path Windows will launch on boot).
@@ -31,18 +33,26 @@ Every push to `main` triggers `.github/workflows/build-release.yml`, which build
 
 ## Files
 
-| File | Purpose |
-| --- | --- |
-| `main.py` | Entry point, wires everything together |
-| `tray.py` | Pystray icon + menu |
-| `picker.py` | Tk vault picker dialog |
-| `launcher.py` | Spawn / kill / restart Claude subprocess |
-| `config.py` | Read/write `config.json` |
-| `vault_detector.py` | Parse Obsidian's vault list |
-| `startup.py` | Register `.lnk` in Windows Startup folder |
-| `logger.py` | File logger to `%LOCALAPPDATA%\obsidian_claude_remote\app.log` |
-| `generate_icon.py` | Generates `icon.ico` + `assets/images/favicon.png` via PIL |
-| `build.py` | PyInstaller wrapper |
+```
+obsidian_claude_remote/
+├── src/obsidian_claude_remote/   # package
+│   ├── __main__.py               # entry, `python -m obsidian_claude_remote`
+│   ├── tray.py                   # pystray icon + menu
+│   ├── picker.py                 # tk vault picker dialog
+│   ├── launcher.py               # spawn / kill / restart claude subprocess
+│   ├── config.py                 # read/write config.json
+│   ├── vault_detector.py         # parse obsidian's vault list
+│   ├── startup.py                # register .lnk in windows startup folder
+│   └── logger.py                 # file logger
+├── scripts/
+│   ├── build.py                  # pyinstaller wrapper
+│   ├── generate_icon.py          # regenerate icon.ico + favicon.png
+│   └── _pyinstaller_entry.py     # shim so pyinstaller can import the package
+├── assets/images/favicon.png
+├── icon.ico
+├── pyproject.toml
+└── requirements.txt
+```
 
 ## Logs
 

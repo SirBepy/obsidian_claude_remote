@@ -4,7 +4,7 @@ import sys
 
 import psutil
 
-from logger import log
+from .logger import log
 
 _proc: subprocess.Popen | None = None
 

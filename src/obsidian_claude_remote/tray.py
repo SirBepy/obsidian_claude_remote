@@ -5,7 +5,7 @@ from pathlib import Path
 import pystray
 from PIL import Image
 
-from logger import log
+from .logger import log
 
 
 def resource_path(rel: str) -> str:
@@ -17,7 +17,7 @@ def _load_icon_image() -> Image.Image:
     candidates = [
         resource_path("assets/images/favicon.png"),
         resource_path("favicon.png"),
-        str(Path(__file__).parent / "assets" / "images" / "favicon.png"),
+        str(Path(__file__).resolve().parents[2] / "assets" / "images" / "favicon.png"),
     ]
     for c in candidates:
         if os.path.exists(c):
