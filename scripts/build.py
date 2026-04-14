@@ -39,6 +39,8 @@ def main() -> int:
         "icon.ico;.",
         "--add-data",
         "src/obsidian_claude_remote/ui/picker.html;ui",
+        "--add-data",
+        "src/obsidian_claude_remote/ui/blank.html;ui",
         "--collect-all",
         "webview",
         "--name=obsidian_claude_remote",
