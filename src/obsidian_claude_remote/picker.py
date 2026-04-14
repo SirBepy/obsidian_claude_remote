@@ -2,13 +2,15 @@ import os
 import sys
 import threading
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 import webview
 
 from .logger import log
 
 WINDOW_TITLE = "obsidian_claude_remote - pick vault"
+
+_host_ready = threading.Event()
 
 
 def _resource_path(rel: str) -> str:
@@ -79,7 +81,46 @@ class _Api:
             self.window.destroy()
 
 
-def pick_vault(vaults: list[str]) -> Optional[str]:
+def start_host(on_ready: Callable[[], None]) -> None:
+    """Start the pywebview event loop on the current (main) thread.
+
+    Creates a hidden persistent window so the loop stays alive across
+    multiple picker invocations. Calls on_ready from a background thread
+    once the loop is running. Returns when shutdown() is called.
+    """
+    webview.create_window(
+        "__ocr_host__",
+        _resource_path("ui/blank.html"),
+        hidden=True,
+        width=1,
+        height=1,
+    )
+
+    def _fire_ready():
+        _host_ready.set()
+        try:
+            on_ready()
+        except Exception:
+            log.exception("on_ready callback failed")
+
+    webview.start(_fire_ready)
+
+
+def shutdown() -> None:
+    """Destroy all webview windows so start_host returns."""
+    for w in list(webview.windows):
+        try:
+            w.destroy()
+        except Exception:
+            pass
+
+
+def show_picker(vaults: list[str]) -> Optional[str]:
+    """Show the picker dialog. Safe to call from any thread after start_host."""
+    if not _host_ready.wait(timeout=10):
+        log.error("webview host never became ready")
+        return None
+
     result: dict = {"path": None}
     api = _Api(vaults, result)
     html_path = _resource_path("ui/picker.html")
@@ -101,5 +142,7 @@ def pick_vault(vaults: list[str]) -> Optional[str]:
             threading.Timer(0.1, lambda: _set_window_icon(WINDOW_TITLE, ico)).start()
         window.events.shown += _on_shown
 
-    webview.start()
+    done = threading.Event()
+    window.events.closed += lambda: done.set()
+    done.wait()
     return result["path"]

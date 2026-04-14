@@ -1,10 +1,10 @@
 import atexit
 import os
 import sys
+import threading
 
-from . import config, launcher, startup, vault_detector
+from . import config, launcher, picker, startup, vault_detector
 from .logger import log
-from .picker import pick_vault
 from .tray import build_icon
 
 
@@ -12,19 +12,6 @@ def _paths_equal(a: str | None, b: str | None) -> bool:
     if not a or not b:
         return False
     return os.path.normcase(os.path.abspath(a)) == os.path.normcase(os.path.abspath(b))
-
-
-def ensure_vault(cfg: dict) -> str | None:
-    if cfg.get("vault_path"):
-        return cfg["vault_path"]
-    vaults = vault_detector.detect()
-    chosen = pick_vault(vaults)
-    if not chosen:
-        log.warning("user cancelled vault picker, exiting")
-        return None
-    cfg["vault_path"] = chosen
-    config.save(cfg)
-    return chosen
 
 
 def ensure_startup(cfg: dict) -> None:
@@ -48,7 +35,7 @@ def ensure_startup(cfg: dict) -> None:
 
 def on_settings(cfg: dict) -> None:
     vaults = vault_detector.detect()
-    chosen = pick_vault(vaults)
+    chosen = picker.show_picker(vaults)
     if not chosen or chosen == cfg.get("vault_path"):
         return
     cfg["vault_path"] = chosen
@@ -61,21 +48,25 @@ def on_restart(cfg: dict) -> None:
         launcher.restart(cfg["vault_path"])
 
 
-def on_quit() -> None:
-    launcher.kill()
-
-
-def main() -> int:
-    log.info("=== obsidian_claude_remote starting ===")
-    cfg = config.load()
-
-    vault = ensure_vault(cfg)
+def _bootstrap(cfg: dict) -> None:
+    vault = cfg.get("vault_path")
     if not vault:
-        return 1
+        vaults = vault_detector.detect()
+        vault = picker.show_picker(vaults)
+        if not vault:
+            log.warning("user cancelled vault picker, exiting")
+            picker.shutdown()
+            return
+        cfg["vault_path"] = vault
+        config.save(cfg)
 
     ensure_startup(cfg)
     launcher.launch(vault)
     atexit.register(launcher.kill)
+
+    def on_quit():
+        launcher.kill()
+        picker.shutdown()
 
     icon = build_icon(
         on_settings=lambda: on_settings(cfg),
@@ -83,8 +74,20 @@ def main() -> int:
         on_quit=on_quit,
     )
     log.info("entering tray loop")
-    icon.run()
-    log.info("tray loop exited")
+    threading.Thread(target=icon.run, name="tray", daemon=True).start()
+
+
+def main() -> int:
+    log.info("=== obsidian_claude_remote starting ===")
+    cfg = config.load()
+
+    def _on_ready():
+        threading.Thread(
+            target=_bootstrap, args=(cfg,), name="bootstrap", daemon=True
+        ).start()
+
+    picker.start_host(_on_ready)
+    log.info("webview host exited")
     return 0
 
 
