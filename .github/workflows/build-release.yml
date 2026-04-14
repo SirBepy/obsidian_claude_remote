@@ -1,0 +1,71 @@
+name: build-release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install deps
+        run: pip install -r requirements.txt
+
+      - name: Generate icon
+        run: python generate_icon.py
+
+      - name: Build exe
+        run: python build.py
+
+      - name: Compute next version
+        id: ver
+        shell: bash
+        run: |
+          git fetch --tags --force
+          latest=$(git tag --list 'v*' --sort=-v:refname | head -n1)
+          if [ -z "$latest" ]; then
+            next="v0.1.0"
+          else
+            ver="${latest#v}"
+            maj=$(echo "$ver" | cut -d. -f1)
+            min=$(echo "$ver" | cut -d. -f2)
+            pat=$(echo "$ver" | cut -d. -f3)
+            pat=$((pat+1))
+            next="v${maj}.${min}.${pat}"
+          fi
+          echo "next=$next" >> "$GITHUB_OUTPUT"
+          echo "Next version: $next"
+
+      - name: Create and push tag
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag "${{ steps.ver.outputs.next }}"
+          git push origin "${{ steps.ver.outputs.next }}"
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.ver.outputs.next }}
+          name: ${{ steps.ver.outputs.next }}
+          body: |
+            Automated build from commit ${{ github.sha }}.
+
+            Download `obsidian_claude_remote.exe` and run it once from where you want it to live. It self-registers in the Windows Startup folder.
+          files: dist/obsidian_claude_remote.exe
+          fail_on_unmatched_files: true
