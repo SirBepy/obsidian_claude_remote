@@ -5,7 +5,7 @@ from pathlib import Path
 import pystray
 from PIL import Image
 
-from . import __version__
+from . import __version__, launcher
 from .logger import log
 
 
@@ -27,9 +27,22 @@ def _load_icon_image() -> Image.Image:
     return Image.new("RGBA", (64, 64), (124, 58, 237, 255))
 
 
-def build_icon(on_settings, on_restart, on_quit) -> pystray.Icon:
+def build_icon(
+    on_show_terminal, on_open_web, on_settings, on_restart, on_quit
+) -> pystray.Icon:
     image = _load_icon_image()
     menu = pystray.Menu(
+        pystray.MenuItem(
+            "Show terminal",
+            lambda icon, item: on_show_terminal(),
+            default=True,
+        ),
+        pystray.MenuItem(
+            "Open in web",
+            lambda icon, item: on_open_web(),
+            visible=lambda item: launcher.get_web_url() is not None,
+        ),
+        pystray.Menu.SEPARATOR,
         pystray.MenuItem("Settings", lambda icon, item: on_settings()),
         pystray.MenuItem("Restart Claude", lambda icon, item: on_restart()),
         pystray.MenuItem(

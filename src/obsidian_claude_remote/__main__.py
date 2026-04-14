@@ -2,6 +2,7 @@ import atexit
 import os
 import sys
 import threading
+import webbrowser
 
 from . import config, launcher, picker, startup, vault_detector
 from .logger import log
@@ -68,7 +69,17 @@ def _bootstrap(cfg: dict) -> None:
         launcher.kill()
         picker.shutdown()
 
+    def on_open_web():
+        url = launcher.get_web_url()
+        if url:
+            log.info("opening web: %s", url)
+            webbrowser.open(url)
+        else:
+            log.warning("open_web: session id not yet available")
+
     icon = build_icon(
+        on_show_terminal=launcher.show_window,
+        on_open_web=on_open_web,
         on_settings=lambda: on_settings(cfg),
         on_restart=lambda: on_restart(cfg),
         on_quit=on_quit,
