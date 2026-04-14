@@ -1,0 +1,14 @@
+{
+  "title": "Obsidian Claude Remote",
+  "shortDescription": "Windows tray app that auto-launches Claude Code in your Obsidian vault so you can reach it from the phone app.",
+  "type": "Desktop",
+  "status": "in-progress",
+  "languages": ["Python"],
+  "frameworks": ["pystray", "Tkinter"],
+  "tools": ["Pillow", "psutil", "pywin32", "PyInstaller", "GitHub Actions"],
+  "liveUrl": null,
+  "mainImage": null,
+  "images": [],
+  "year": 2026,
+  "impressiveness": 2
+}
