@@ -1,3 +1,4 @@
+import os
 import subprocess
 import sys
 
@@ -19,14 +20,25 @@ def launch(vault_path: str) -> None:
     if _proc is not None and _proc.poll() is None:
         log.info("launch called but process already running pid=%s", _proc.pid)
         return
+    prefix = os.path.basename(vault_path.rstrip("\\/")) or "ObsidianVault"
     try:
         _proc = subprocess.Popen(
-            ["claude", "--remote-control"],
+            [
+                "claude",
+                "--remote-control",
+                "--remote-control-session-name-prefix",
+                prefix,
+            ],
             cwd=vault_path,
             creationflags=_popen_flags(),
             shell=True,
         )
-        log.info("claude launched pid=%s cwd=%s", _proc.pid, vault_path)
+        log.info(
+            "claude launched pid=%s cwd=%s prefix=%s",
+            _proc.pid,
+            vault_path,
+            prefix,
+        )
     except Exception as e:
         log.error("launch failed: %s", e)
         _proc = None
