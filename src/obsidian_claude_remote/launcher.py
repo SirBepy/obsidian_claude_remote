@@ -12,6 +12,8 @@ from .logger import log
 _proc: subprocess.Popen | None = None
 _hwnd: int = 0
 _session_id: str | None = None
+_guard_target: list[int] = [0]
+_guard_started: bool = False
 
 
 def _popen_flags() -> int:
@@ -60,6 +62,108 @@ def _disable_close_button(hwnd: int) -> None:
         log.warning("disable close button failed: %s", e)
 
 
+def _guard_thread() -> None:
+    import ctypes
+    from ctypes import wintypes
+
+    user32 = ctypes.WinDLL("user32", use_last_error=True)
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+
+    WH_KEYBOARD_LL = 13
+    WM_SYSKEYDOWN = 0x0104
+    VK_F4 = 0x73
+    LLKHF_ALTDOWN = 0x20
+    EVENT_SYSTEM_MINIMIZESTART = 0x0016
+    WINEVENT_OUTOFCONTEXT = 0x0000
+
+    class KBDLLHOOKSTRUCT(ctypes.Structure):
+        _fields_ = [
+            ("vkCode", wintypes.DWORD),
+            ("scanCode", wintypes.DWORD),
+            ("flags", wintypes.DWORD),
+            ("time", wintypes.DWORD),
+            ("dwExtraInfo", ctypes.c_void_p),
+        ]
+
+    LowLevelKeyboardProc = ctypes.CFUNCTYPE(
+        ctypes.c_long, ctypes.c_int, wintypes.WPARAM, wintypes.LPARAM
+    )
+    WinEventProc = ctypes.CFUNCTYPE(
+        None,
+        ctypes.c_void_p,
+        wintypes.DWORD,
+        wintypes.HWND,
+        wintypes.LONG,
+        wintypes.LONG,
+        wintypes.DWORD,
+        wintypes.DWORD,
+    )
+
+    def _kbd_proc(nCode, wParam, lParam):
+        try:
+            if nCode == 0 and wParam == WM_SYSKEYDOWN:
+                kb = ctypes.cast(lParam, ctypes.POINTER(KBDLLHOOKSTRUCT))[0]
+                if kb.vkCode == VK_F4 and (kb.flags & LLKHF_ALTDOWN):
+                    target = _guard_target[0]
+                    if target and user32.GetForegroundWindow() == target:
+                        hide_window()
+                        return 1
+        except Exception as e:
+            log.warning("kbd hook error: %s", e)
+        return user32.CallNextHookEx(None, nCode, wParam, lParam)
+
+    def _win_event_proc(
+        hWinEventHook, event, hwnd, idObject, idChild, idThread, dwmsEventTime
+    ):
+        try:
+            target = _guard_target[0]
+            if target and hwnd == target and event == EVENT_SYSTEM_MINIMIZESTART:
+                hide_window()
+        except Exception as e:
+            log.warning("winevent hook error: %s", e)
+
+    kbd_cb = LowLevelKeyboardProc(_kbd_proc)
+    evt_cb = WinEventProc(_win_event_proc)
+
+    user32.SetWindowsHookExW.restype = ctypes.c_void_p
+    user32.SetWinEventHook.restype = ctypes.c_void_p
+    kernel32.GetModuleHandleW.restype = ctypes.c_void_p
+
+    hmod = kernel32.GetModuleHandleW(None)
+    kbd_hook = user32.SetWindowsHookExW(WH_KEYBOARD_LL, kbd_cb, hmod, 0)
+    evt_hook = user32.SetWinEventHook(
+        EVENT_SYSTEM_MINIMIZESTART,
+        EVENT_SYSTEM_MINIMIZESTART,
+        None,
+        evt_cb,
+        0,
+        0,
+        WINEVENT_OUTOFCONTEXT,
+    )
+
+    if not kbd_hook:
+        log.warning("SetWindowsHookExW failed err=%s", ctypes.get_last_error())
+    if not evt_hook:
+        log.warning("SetWinEventHook failed err=%s", ctypes.get_last_error())
+
+    log.info("window guard thread running")
+
+    msg = wintypes.MSG()
+    while user32.GetMessageW(ctypes.byref(msg), None, 0, 0) > 0:
+        user32.TranslateMessage(ctypes.byref(msg))
+        user32.DispatchMessageW(ctypes.byref(msg))
+
+
+def _ensure_guard_started() -> None:
+    global _guard_started
+    if _guard_started or sys.platform != "win32":
+        return
+    _guard_started = True
+    import threading
+
+    threading.Thread(target=_guard_thread, name="window-guard", daemon=True).start()
+
+
 def _resolve_hwnd() -> int:
     global _hwnd
     if _proc is None:
@@ -70,6 +174,8 @@ def _resolve_hwnd() -> int:
             _hwnd = hwnd
             log.info("console hwnd resolved hwnd=%s pid=%s", hwnd, _proc.pid)
             _disable_close_button(hwnd)
+            _guard_target[0] = hwnd
+            _ensure_guard_started()
             return hwnd
         time.sleep(0.05)
     log.warning("console hwnd not resolved pid=%s", _proc.pid)
@@ -237,6 +343,7 @@ def kill() -> None:
         _proc = None
         _hwnd = 0
         _session_id = None
+        _guard_target[0] = 0
 
 
 def restart(vault_path: str) -> None:
