@@ -230,20 +230,23 @@ def _post_launch_resolve() -> None:
     _resolve_session_id()
 
 
-def launch(vault_path: str) -> None:
+def launch(vault_path: str, continue_session: bool = True) -> None:
     global _proc, _hwnd, _session_id
     if _proc is not None and _proc.poll() is None:
         log.info("launch called but process already running pid=%s", _proc.pid)
         return
     prefix = os.path.basename(vault_path.rstrip("\\/")) or "ObsidianVault"
+    argv = [
+        "claude",
+        "--remote-control",
+        "--remote-control-session-name-prefix",
+        prefix,
+    ]
+    if continue_session:
+        argv.append("--continue")
     try:
         _proc = subprocess.Popen(
-            [
-                "claude",
-                "--remote-control",
-                "--remote-control-session-name-prefix",
-                prefix,
-            ],
+            argv,
             cwd=vault_path,
             creationflags=_popen_flags(),
             shell=True,
@@ -251,10 +254,11 @@ def launch(vault_path: str) -> None:
         _hwnd = 0
         _session_id = None
         log.info(
-            "claude launched pid=%s cwd=%s prefix=%s",
+            "claude launched pid=%s cwd=%s prefix=%s continue=%s",
             _proc.pid,
             vault_path,
             prefix,
+            continue_session,
         )
         import threading
 
@@ -346,9 +350,9 @@ def kill() -> None:
         _guard_target[0] = 0
 
 
-def restart(vault_path: str) -> None:
+def restart(vault_path: str, continue_session: bool = True) -> None:
     kill()
-    launch(vault_path)
+    launch(vault_path, continue_session=continue_session)
 
 
 def is_running() -> bool:

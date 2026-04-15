@@ -41,12 +41,17 @@ def on_settings(cfg: dict) -> None:
         return
     cfg["vault_path"] = chosen
     config.save(cfg)
-    launcher.restart(chosen)
+    launcher.restart(chosen, continue_session=False)
 
 
 def on_restart(cfg: dict) -> None:
     if cfg.get("vault_path"):
         launcher.restart(cfg["vault_path"])
+
+
+def on_new_session(cfg: dict) -> None:
+    if cfg.get("vault_path"):
+        launcher.restart(cfg["vault_path"], continue_session=False)
 
 
 def _bootstrap(cfg: dict) -> None:
@@ -82,6 +87,7 @@ def _bootstrap(cfg: dict) -> None:
         on_open_web=on_open_web,
         on_settings=lambda: on_settings(cfg),
         on_restart=lambda: on_restart(cfg),
+        on_new_session=lambda: on_new_session(cfg),
         on_quit=on_quit,
     )
     log.info("entering tray loop")

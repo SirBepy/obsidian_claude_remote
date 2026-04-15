@@ -28,7 +28,12 @@ def _load_icon_image() -> Image.Image:
 
 
 def build_icon(
-    on_show_terminal, on_open_web, on_settings, on_restart, on_quit
+    on_show_terminal,
+    on_open_web,
+    on_settings,
+    on_restart,
+    on_new_session,
+    on_quit,
 ) -> pystray.Icon:
     image = _load_icon_image()
     menu = pystray.Menu(
@@ -45,6 +50,7 @@ def build_icon(
         pystray.Menu.SEPARATOR,
         pystray.MenuItem("Settings", lambda icon, item: on_settings()),
         pystray.MenuItem("Restart Claude", lambda icon, item: on_restart()),
+        pystray.MenuItem("New session", lambda icon, item: on_new_session()),
         pystray.MenuItem(
             "Quit", lambda icon, item: (on_quit(), icon.stop())
         ),
