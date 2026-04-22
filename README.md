@@ -1,3 +1,17 @@
+> ⚠ **DISCONTINUED** — This project has been merged into
+> [claude_usage_in_taskbar](https://github.com/SirBepy/claude_usage_in_taskbar).
+> Please migrate: install the new app and click **Import** on first launch.
+
+## Migration
+
+- Download the latest [claude_usage_in_taskbar](https://github.com/SirBepy/claude_usage_in_taskbar) release.
+- Run it; first launch offers to import your existing `obsidian_claude_remote` config.
+- Confirm the automated channel is running in the new app.
+- Uninstall `obsidian_claude_remote`:
+  - Quit the tray app.
+  - Delete the `.lnk` from `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\`.
+  - Delete the exe wherever you placed it.
+
 # obsidian_claude_remote
 
 Windows tray app. Auto-launches Claude Code with `--remote-control` inside an Obsidian vault on PC boot. Lets you reach the vault from the Claude phone app without ever opening a terminal.

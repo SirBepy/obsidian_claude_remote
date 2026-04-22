@@ -1,3 +1,5 @@
+Project discontinued on 2026-04-22; see README and DISCONTINUED.md. Successor project is claude_usage_in_taskbar.
+
 ## Project
 
 Type: other (Python 3.10-3.13 Windows desktop tray app; pinned <3.14 because pywebview's `pythonnet` dep has no 3.14 wheel yet)
